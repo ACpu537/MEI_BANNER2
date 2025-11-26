@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banner 後台模擬器 - 選單與儲值</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: "Noto Sans TC", sans-serif; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Icon Components
+        const IconWrapper = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        
+        // Standard Icons
+        const LayoutDashboard = (props) => <IconWrapper {...props}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></IconWrapper>;
+        const ChevronDown = (props) => <IconWrapper {...props}><path d="m6 9 6 6 6-6"/></IconWrapper>;
+        const ChevronRight = (props) => <IconWrapper {...props}><path d="m9 18 6-6-6-6"/></IconWrapper>;
+        const Plus = (props) => <IconWrapper {...props}><path d="M5 12h14"/><path d="M12 5v14"/></IconWrapper>;
+        const Search = (props) => <IconWrapper {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconWrapper>;
+        const Calendar = (props) => <IconWrapper {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></IconWrapper>;
+        const Globe = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1-4 10z"/></IconWrapper>;
+        const Users = (props) => <IconWrapper {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconWrapper>;
+        const ImageIcon = (props) => <IconWrapper {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></IconWrapper>;
+        const AlertTriangle = (props) => <IconWrapper {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconWrapper>;
+        const X = (props) => <IconWrapper {...props}><path d="M18 6 6 18"/><path d="M6 6 18 18"/></IconWrapper>;
+        const Filter = (props) => <IconWrapper {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></IconWrapper>;
+        const Maximize2 = (props) => <IconWrapper {...props}><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></IconWrapper>;
+        const Trash2 = (props) => <IconWrapper {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></IconWrapper>;
+        const Pencil = (props) => <IconWrapper {...props}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></IconWrapper>;
+        const MousePointerClick = (props) => <IconWrapper {...props}><path d="m9 9 5 12 1.8-5.2L21 14Z"/><path d="M7.2 2.2 8 5.1"/><path d="m5.1 8-2.9-.8"/><path d="M14 4.1 12 6"/><path d="m6 12-1.9 2"/></IconWrapper>;
+        const RotateCcw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconWrapper>;
+        const Info = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></IconWrapper>;
+
+        // Classic Brand Icons
+        const AppleLogo = ({ size = 24, className="" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+                <path d="M17.05 19.096c-.56.816-1.157 1.63-2.043 1.653-.89.024-1.177-.527-2.197-.527-1.02 0-1.34.503-2.177.53-.91.022-1.568-.88-2.13-1.687-1.165-1.68-2.066-4.747-.866-6.822.596-1.033 1.67-1.687 2.83-1.713 1.08-.023 1.82.727 2.4.727.576 0 1.655-.887 2.793-.755.477.02 1.814.19 2.665 1.437-.067.04-1.592.93-1.578 2.77.013 2.208 1.93 2.94 1.94 2.95-.01.055-1.3 2.955-1.638 3.438zM14.96 4.88c.586-.71 1.047-1.7 1.248-1.88.166.01.795.037 1.31.67.55.674.665 1.8.514 2.473-.66.03-1.424-.435-1.98-1.11-.514-.623-.63-1.323-.54-1.778-.25.03-.42.497-.55.625z" />
+            </svg>
+        );
+        const AndroidLogo = ({ size = 24, className="" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="#3DDC84" className={className}>
+                <path d="M17.523 15.3414C17.523 15.3414 17.5605 15.3409 17.5605 15.3409C17.5605 15.3409 17.5605 15.3409 17.5605 15.3409L17.5605 15.3414ZM6.47656 15.3414C6.47656 15.3414 6.51406 15.3409 6.51406 15.3409C6.51406 15.3409 6.51406 15.3409 6.51406 15.3409L6.47656 15.3414ZM7.0875 19.5C5.16609 18.2002 4 15.8583 4 13.3125C4 9.49313 6.79547 6.32812 10.45 5.63578L9.22922 3.52172C9.12328 3.33797 9.18609 3.10266 9.36937 2.99672C9.55266 2.89172 9.78844 2.95406 9.89344 3.13781L11.198 5.39813C11.7234 5.34563 12.2597 5.34563 12.7856 5.39813L14.0902 3.13781C14.1961 2.95406 14.4305 2.89172 14.6142 2.99672C14.7975 3.10266 14.8603 3.33797 14.7544 3.52172L13.5338 5.63578C17.1881 6.32812 19.9838 9.49313 19.9838 13.3125C19.9838 15.8583 18.8175 18.2002 16.8961 19.5H7.0875ZM7.875 11.625C7.875 11.2111 8.21109 10.875 8.625 10.875C9.03891 10.875 9.375 11.2111 9.375 11.625C9.375 12.0389 9.03891 12.375 8.625 12.375C8.21109 12.375 7.875 12.0389 7.875 11.625ZM15.375 11.625C15.375 12.0389 15.0389 12.375 14.625 12.375C14.2111 12.375 13.875 12.0389 13.875 11.625C13.875 11.2111 14.2111 10.875 14.625 10.875C15.0389 10.875 15.375 11.2111 15.375 11.625Z"/>
+            </svg>
+        );
+        const ChromeLogo = ({ size = 24, className="" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+                <path d="M12 12L7.5 19.794C5.01 18.355 3.5 15.545 3.5 12.5C3.5 9.455 5.01 6.645 7.5 5.206L12 12Z" fill="#FCC624"/>
+                <path d="M12 12L20.66 7C21.51 8.47 22 10.18 22 12C22 17.52 17.52 22 12 22C10.18 22 8.47 21.51 7 20.66L12 12Z" fill="#4CAF50"/>
+                <path d="M12 12V2C17.52 2 22 6.48 22 12C22 12.69 21.89 13.36 21.68 14H12V12Z" fill="#F44336"/>
+                <circle cx="12" cy="12" r="4.5" fill="white"/>
+                <circle cx="12" cy="12" r="3.5" fill="#1976D2"/>
+            </svg>
+        );
+
+        // Mock Data
+        const INITIAL_BANNERS = {
+            menu: [
+                { id: 101, name: '側邊欄-幸運轉盤', status: 'active', startTime: '2023-11-01 00:00', endTime: '2099-12-31 23:59', audience: 'all', vipLevels: [], platforms: ['all'], priority: 1, clicks: 1205, images: { 'en-US': true, 'ph-PH': true } },
+                { id: 102, name: 'VIP 專屬側欄 (iOS Only)', status: 'inactive', startTime: '2024-01-01 00:00', endTime: '2024-01-31 23:59', audience: 'vip', vipLevels: ['1'], platforms: ['iOS'], priority: 2, clicks: 30, images: { 'en-US': true, 'ph-PH': false } }
+            ],
+            deposit: [
+                { id: 201, name: '首儲優惠活動', status: 'active', startTime: '2023-12-01 00:00', endTime: '2024-01-31 23:59', audience: 'all', vipLevels: [], platforms: ['all'], priority: 1, clicks: 530, images: { 'en-US': true, 'ph-PH': true } },
+                { id: 202, name: '網頁版限定儲值', status: 'inactive', startTime: '2023-12-01 00:00', endTime: '2024-01-31 23:59', audience: 'all', vipLevels: [], platforms: ['Web'], priority: 2, clicks: 120, images: { 'en-US': true, 'ph-PH': true } }
+            ] 
+        };
+
+        // Components
+        const ImagePreviewModal = ({ isOpen, onClose, banner, activePage }) => {
+            if (!isOpen || !banner) return null;
+            const isVertical = activePage === 'menu';
+            const aspectRatioClass = isVertical ? 'aspect-[3/5] h-[60vh] mx-auto shadow-lg' : 'aspect-video w-full shadow-md';
+            const gradientClass = activePage === 'menu' ? 'from-purple-400 to-indigo-600' : 'from-blue-400 to-cyan-600';
+            
+            return (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] animate-in fade-in duration-200 backdrop-blur-sm" onClick={onClose}>
+                    <div className="bg-white rounded-xl shadow-2xl w-[800px] max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <div><h3 className="text-lg font-bold text-gray-800">{banner.name}</h3></div>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-900"><X size={20} /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8 bg-gray-100 flex items-center justify-center">
+                            <div className={`${aspectRatioClass} rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white text-3xl font-bold shadow-sm transition-all duration-300 relative group`}>
+                                <ImageIcon size={64} className="opacity-50 mb-4" />
+                                <span className="absolute bottom-4 text-lg opacity-80 font-medium tracking-wider">{isVertical ? 'Menu Image' : 'Deposit Image'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Sidebar = ({ activePage, setActivePage }) => {
+            const [isBannerMenuOpen, setIsBannerMenuOpen] = useState(true);
+            return (
+                <div className="w-64 bg-white h-screen border-r border-gray-200 flex flex-col shadow-sm fixed left-0 top-0 z-10">
+                    <div className="p-6">
+                        <h1 className="text-xl font-bold text-indigo-700 flex items-center gap-2"><LayoutDashboard size={24} />博弈後台系統</h1>
+                        <p className="text-xs text-gray-500 mt-1 ml-8">CMS 管理模組</p>
+                    </div>
+                    <nav className="flex-1 px-4 space-y-2">
+                        <div>
+                            <button onClick={() => setIsBannerMenuOpen(!isBannerMenuOpen)} className="w-full flex items-center justify-between p-3 text-indigo-800 bg-indigo-50 rounded-lg font-medium transition-colors">
+                                <div className="flex items-center gap-3"><ImageIcon size={18} /><span>Banner 設定</span></div>
+                                {isBannerMenuOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </button>
+                            {isBannerMenuOpen && (
+                                <div className="mt-1 ml-4 space-y-1 border-l-2 border-indigo-100 pl-2">
+                                    <button onClick={() => setActivePage('menu')} className={`w-full text-left p-2 text-sm rounded-md transition-all flex items-center gap-2 ${activePage === 'menu' ? 'text-indigo-600 bg-white shadow-sm font-medium border-l-4 border-indigo-500 -ml-[10px] pl-[14px]' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50'}`}>{activePage === 'menu' && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}選單MENU</button>
+                                    <button onClick={() => setActivePage('deposit')} className={`w-full text-left p-2 text-sm rounded-md transition-all flex items-center gap-2 ${activePage === 'deposit' ? 'text-indigo-600 bg-white shadow-sm font-medium border-l-4 border-indigo-500 -ml-[10px] pl-[14px]' : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50'}`}>{activePage === 'deposit' && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}儲值頁</button>
+                                </div>
+                            )}
+                        </div>
+                    </nav>
+                </div>
+            );
+        };
+
+        const BannerModal = ({ isOpen, onClose, activePage, existingBanners, onSave }) => {
+            if (!isOpen) return null;
+            const [currentTab, setCurrentTab] = useState('en-US');
+            const [formData, setFormData] = useState({ name: '', startTime: '', endTime: '', audience: 'all', vipLevels: [], platformType: 'all', platforms: ['all'], images: { 'en-US': null, 'ph-PH': null } });
+            const [showOverwriteWarning, setShowOverwriteWarning] = useState(false);
+            const [errorMsg, setErrorMsg] = useState('');
+
+            const handleVipChange = (level) => {
+                setFormData(prev => {
+                    const newLevels = prev.vipLevels.includes(level) ? prev.vipLevels.filter(l => l !== level) : [...prev.vipLevels, level];
+                    return { ...prev, vipLevels: newLevels };
+                });
+            };
+
+            const handlePlatformChange = (pf) => {
+                setFormData(prev => {
+                    if (pf === 'all') { return { ...prev, platformType: 'all', platforms: ['all'] }; }
+                    let newPlatforms = [...(prev.platforms || [])].filter(p => p !== 'all'); 
+                    if (prev.platformType === 'all') { newPlatforms = []; } 
+
+                    if (newPlatforms.includes(pf)) {
+                        newPlatforms = newPlatforms.filter(p => p !== pf);
+                    } else {
+                        newPlatforms.push(pf);
+                    }
+                    
+                    return { ...prev, platformType: 'specific', platforms: newPlatforms };
+                });
+            };
+
+            const checkOverwrite = () => { return false; };
+
+            const handleSubmit = () => {
+                setErrorMsg('');
+                if (checkOverwrite() && !showOverwriteWarning) return;
+
+                if (!formData.startTime || !formData.endTime) { setErrorMsg('請設定完整的開始與結束時間！'); return; }
+                const newStart = new Date(formData.startTime).getTime();
+                const newEnd = new Date(formData.endTime).getTime();
+                if (newStart >= newEnd) { setErrorMsg('結束時間必須晚於開始時間！'); return; }
+                
+                if (formData.platformType === 'specific' && (!formData.platforms || formData.platforms.length === 0)) {
+                    setErrorMsg('請至少選擇一個平台！'); return;
+                }
+
+                if (activePage === 'menu' || activePage === 'deposit') {
+                    const hasConflict = existingBanners.some(b => {
+                        const bStart = new Date(b.startTime.replace(' ', 'T')).getTime();
+                        const bEnd = new Date(b.endTime.replace(' ', 'T')).getTime();
+                        const isTimeOverlap = (newStart <= bEnd) && (newEnd >= bStart);
+                        if (!isTimeOverlap) return false;
+                        
+                        const isPlatformOverlap = (formData.platforms.includes('all') || b.platforms.includes('all')) || 
+                                                  formData.platforms.some(p => b.platforms.includes(p));
+                        
+                        if (!isPlatformOverlap) return false;
+
+                        if (formData.audience === 'all' || b.audience === 'all') return true;
+                        if (formData.audience === 'vip' && b.audience === 'vip') {
+                            const intersection = formData.vipLevels.filter(level => b.vipLevels.includes(level));
+                            return intersection.length > 0;
+                        }
+                        return false; 
+                    });
+                    if (hasConflict) { setErrorMsg('儲存失敗：此時段已存在衝突的 Banner (時間、平台或受眾重疊)，請調整！'); return; }
+                }
+
+                const formattedStart = formData.startTime.replace('T', ' ');
+                const formattedEnd = formData.endTime.replace('T', ' ');
+                onSave({ ...formData, id: Date.now(), status: 'active', priority: 1, clicks: 0, startTime: formattedStart, endTime: formattedEnd, images: { 'en-US': true, 'ph-PH': true } });
+                onClose();
+            };
+
+            const modalTitle = activePage === 'menu' ? "新增選單 Banner" : "新增儲值頁 Banner";
+            const getTabLabel = (tab) => { switch(tab) { case 'en-US': return '英文版'; case 'ph-PH': return '菲律賓版'; default: return ''; } };
+
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-xl shadow-2xl w-[600px] max-h-[90vh] overflow-y-auto flex flex-col">
+                        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-indigo-50/50">
+                            <h2 className="text-lg font-bold text-gray-800">{modalTitle}</h2>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                        </div>
+                        <div className="p-6 space-y-6 flex-1">
+                            <div className="space-y-4">
+                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Banner 名稱 (內部識別用)</label><input type="text" className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="例如：2024 新春活動" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} /></div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><label className="block text-sm font-medium text-gray-700 mb-1">上架開始時間</label><input type="datetime-local" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={formData.startTime} onChange={(e) => setFormData({...formData, startTime: e.target.value})} /></div>
+                                    <div><label className="block text-sm font-medium text-gray-700 mb-1">下架結束時間</label><input type="datetime-local" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={formData.endTime} onChange={(e) => setFormData({...formData, endTime: e.target.value})} /></div>
+                                </div>
+                                
+                                {/* 投放平台設定 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">投放平台</label>
+                                    <div className="flex gap-4 mb-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="platformType" className="text-indigo-600 focus:ring-indigo-500" checked={!formData.platformType || formData.platformType === 'all'} onChange={() => handlePlatformChange('all')} />
+                                            <span className="text-sm font-medium text-gray-700">全平台</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer ml-4">
+                                            <input type="radio" name="platformType" className="text-indigo-600 focus:ring-indigo-500" checked={formData.platformType === 'specific'} onChange={() => setFormData(prev => ({...prev, platformType: 'specific', platforms: []}))} />
+                                            <span className="text-sm font-medium text-gray-700">指定平台</span>
+                                        </label>
+                                    </div>
+                                    {formData.platformType === 'specific' && (
+                                        <div className="pl-6 flex gap-4 text-sm text-gray-600 animate-fade-in mt-2">
+                                            <label className="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors">
+                                                <input type="checkbox" className="rounded text-indigo-600" checked={(formData.platforms || []).includes('iOS')} onChange={() => handlePlatformChange('iOS')} /> 
+                                                <span className="font-medium">iOS</span>
+                                            </label>
+                                            <label className="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors">
+                                                <input type="checkbox" className="rounded text-indigo-600" checked={(formData.platforms || []).includes('Android')} onChange={() => handlePlatformChange('Android')} /> 
+                                                <span className="font-medium">Android</span>
+                                            </label>
+                                            <label className="flex items-center gap-1.5 cursor-pointer px-3 py-1.5 bg-gray-50 rounded border border-gray-200 hover:bg-gray-100 transition-colors">
+                                                <input type="checkbox" className="rounded text-indigo-600" checked={(formData.platforms || []).includes('Web')} onChange={() => handlePlatformChange('Web')} /> 
+                                                <span className="font-medium">Web</span>
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">投放客群</label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="audience" className="text-indigo-600 focus:ring-indigo-500" checked={formData.audience === 'all'} onChange={() => setFormData({...formData, audience: 'all', vipLevels: []})} /><span className="text-sm">全體玩家</span></label>
+                                        <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="audience" className="text-indigo-600 focus:ring-indigo-500" checked={formData.audience === 'vip'} onChange={() => setFormData({...formData, audience: 'vip'})} /><span className="text-sm">僅限 VIP (可選等級)</span></label>
+                                    </div>
+                                    {formData.audience === 'vip' && (
+                                        <div className="mt-2 pl-6 space-x-2 text-sm text-gray-600">
+                                            <label className="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" className="rounded text-indigo-600 focus:ring-indigo-500" checked={formData.vipLevels.includes('1')} onChange={() => handleVipChange('1')} /> VIP 1</label>
+                                            <label className="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" className="rounded text-indigo-600 focus:ring-indigo-500" checked={formData.vipLevels.includes('2')} onChange={() => handleVipChange('2')} /> VIP 2</label>
+                                            <label className="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" className="rounded text-indigo-600 focus:ring-indigo-500" checked={formData.vipLevels.includes('3')} onChange={() => handleVipChange('3')} /> VIP 3+</label>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="border rounded-lg p-4 bg-gray-50">
+                                <label className="block text-sm font-bold text-gray-800 mb-3">圖片素材設定</label>
+                                <div className="flex border-b border-gray-300 mb-4">
+                                    <button onClick={() => setCurrentTab('en-US')} className={`px-4 py-2 text-sm font-medium ${currentTab === 'en-US' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>English (預設)</button>
+                                    <button onClick={() => setCurrentTab('ph-PH')} className={`px-4 py-2 text-sm font-medium ${currentTab === 'ph-PH' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>菲律賓 (Tagalog)</button>
+                                </div>
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-white text-center">
+                                    <ImageIcon className="text-gray-300 mb-2" size={40} />
+                                    <p className="text-sm text-gray-600 font-medium">點擊上傳 {getTabLabel(currentTab)} 圖片</p>
+                                    <p className="text-xs text-gray-400 mt-1">支援 JPG, PNG, GIF (Max 2MB)</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-5 border-t border-gray-100 flex flex-col gap-2 bg-gray-50">
+                            {errorMsg && <div className="text-red-500 text-sm flex items-center gap-1 animate-fade-in justify-end px-1"><Info size={14}/> {errorMsg}</div>}
+                            <div className="flex justify-end gap-3">
+                                <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">取消</button>
+                                <button onClick={handleSubmit} className="px-4 py-2 text-sm text-white rounded-lg shadow-sm flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700">確認</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const BackendSimulator = () => {
+            const [activePage, setActivePage] = useState('menu');
+            const [banners, setBanners] = useState(INITIAL_BANNERS);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+            const [selectedBannerPreview, setSelectedBannerPreview] = useState(null);
+            
+            // 篩選狀態
+            const [filterStatus, setFilterStatus] = useState('all'); 
+            const [filterAudience, setFilterAudience] = useState('all'); // 'all' 顯示所有 (包含vip) , 'vip' 僅顯示vip
+            const [filterPlatform, setFilterPlatform] = useState('all');
+            const [startDate, setStartDate] = useState('');
+            const [endDate, setEndDate] = useState('');
+
+            // 取得當前頁面的資料
+            const rawList = banners[activePage] || [];
+            
+            // 處理列表資料：加入篩選邏輯
+            const currentList = rawList.filter(banner => {
+                if (filterStatus !== 'all' && banner.status !== filterStatus) return false;
+                
+                // 受眾篩選邏輯
+                if (filterAudience === 'vip') {
+                    if (banner.audience !== 'vip') return false;
+                }
+                
+                if (filterPlatform !== 'all') {
+                    // 模擬平台篩選 (假設資料目前不區分)
+                }
+                
+                // 日期篩選邏輯 (簡單模擬: 只要上架時間在選定範圍內)
+                if (startDate) {
+                    const bStart = new Date(banner.startTime.replace(' ', 'T')).getTime();
+                    const fStart = new Date(startDate).getTime();
+                    if (bStart < fStart) return false;
+                }
+                if (endDate) {
+                    const bStart = new Date(banner.startTime.replace(' ', 'T')).getTime();
+                    const fEnd = new Date(endDate).getTime() + 86400000; // 加一天涵蓋當天
+                    if (bStart > fEnd) return false;
+                }
+
+                return true;
+            });
+
+            const handleSaveBanner = (newBanner) => {
+                setBanners(prev => {
+                    let updatedList = [...prev[activePage]];
+                    // Menu/Deposit 皆為排程模式，允許多圖共存 (只要時間不重疊)
+                    updatedList.unshift(newBanner);
+                    return { ...prev, [activePage]: updatedList };
+                });
+            };
+
+            const handleDeleteBanner = (id) => {
+                setBanners(prev => {
+                    let updatedList = prev[activePage].filter(b => b.id !== id);
+                    return { ...prev, [activePage]: updatedList };
+                });
+            };
+
+            const handlePreviewClick = (banner) => { setSelectedBannerPreview(banner); setIsPreviewOpen(true); };
+            
+            const handleResetFilter = () => {
+                setFilterStatus('all');
+                setFilterAudience('all');
+                setFilterPlatform('all');
+                setStartDate('');
+                setEndDate('');
+            };
+
+            const renderStatus = (status) => {
+                if (status === 'active') return <div className="w-2.5 h-2.5 rounded-full bg-green-500 ring-4 ring-green-100"></div>;
+                if (status === 'inactive') return <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>;
+                if (status === 'expired') return <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-100"></div>;
+                return null;
+            };
+            const formatNumber = (num) => (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+            const renderPlatforms = (platforms) => {
+                if (!platforms || platforms.includes('all')) {
+                    return (
+                        <div className="flex gap-2 text-gray-500 items-center justify-center" title="全平台">
+                            <AppleLogo size={20} className="text-gray-800" />
+                            <AndroidLogo size={20} className="text-green-600" />
+                            <ChromeLogo size={20} />
+                        </div>
+                    );
+                }
+                return (
+                    <div className="flex gap-2 text-gray-500 items-center justify-center">
+                        {platforms.includes('iOS') && <AppleLogo size={20} className="text-gray-800" title="iOS" />}
+                        {platforms.includes('Android') && <AndroidLogo size={20} className="text-green-600" title="Android" />}
+                        {platforms.includes('Web') && <ChromeLogo size={20} title="Web" />}
+                    </div>
+                );
+            };
+
+            return (
+                <div className="flex bg-gray-50 min-h-screen font-sans text-slate-800">
+                    <Sidebar activePage={activePage} setActivePage={setActivePage} />
+                    <main className="ml-64 flex-1 p-8">
+                        <div className="mb-6 flex justify-between items-end">
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">{activePage === 'menu' ? '選單 Banner 管理' : '儲值 Banner 管理'}</h1>
+                                <p className="text-gray-500 mt-1 flex items-center gap-2">{activePage === 'menu' ? '側邊選單下方廣告，僅顯示 1 張 (支援排程)' : '儲值介面廣告，僅顯示 1 張 (支援排程)'}</p>
+                            </div>
+                        </div>
+
+                        {/* 篩選器區域 (新增) */}
+                        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-6 flex flex-wrap gap-4 items-end animate-in slide-in-from-top-2 duration-300">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold text-gray-500 tracking-wide">活動期間</label>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-36 transition-all hover:border-gray-300" />
+                                        <Calendar className="absolute left-2.5 top-2.5 text-gray-400" size={14} />
+                                    </div>
+                                    <span className="text-gray-300 font-medium">~</span>
+                                    <div className="relative">
+                                        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none w-36 transition-all hover:border-gray-300" />
+                                        <Calendar className="absolute left-2.5 top-2.5 text-gray-400" size={14} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 w-32">
+                                <label className="text-xs font-bold text-gray-500 tracking-wide">平台</label>
+                                <div className="relative">
+                                    <select value={filterPlatform} onChange={(e) => setFilterPlatform(e.target.value)} className="appearance-none w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer hover:border-gray-300">
+                                        <option value="all">全平台</option>
+                                        <option value="android">Android</option>
+                                        <option value="ios">iOS</option>
+                                        <option value="web">WEB</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={14} />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 w-36">
+                                <label className="text-xs font-bold text-gray-500 tracking-wide">活動狀態</label>
+                                <div className="relative">
+                                    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="appearance-none w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer hover:border-gray-300">
+                                        <option value="all">全部狀態</option>
+                                        <option value="active">🟢 上架中</option>
+                                        <option value="pending">⚪ 待上架</option>
+                                        <option value="expired">🔴 已逾期</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={14} />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5 w-36">
+                                <label className="text-xs font-bold text-gray-500 tracking-wide">受眾分類</label>
+                                <div className="relative">
+                                    <select value={filterAudience} onChange={(e) => setFilterAudience(e.target.value)} className="appearance-none w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer hover:border-gray-300">
+                                        <option value="all">全體玩家 (顯示所有)</option>
+                                        <option value="vip">VIP 玩家 (僅顯示VIP)</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={14} />
+                                </div>
+                            </div>
+
+                            <div className="ml-auto flex gap-2">
+                                <button onClick={handleResetFilter} className="bg-white border border-gray-300 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm">
+                                    <RotateCcw size={14} />重置
+                                </button>
+                                <button className="bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors flex items-center gap-2 shadow-sm">
+                                    <Search size={16} />查詢
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 統計與新增按鈕區 (移動至此) */}
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="bg-indigo-50/50 px-4 py-2 rounded-lg border border-indigo-100 flex items-center gap-3">
+                                <div className="text-xs font-bold text-indigo-400 uppercase tracking-wide">目前上架中</div>
+                                <div className="text-xl font-bold text-indigo-700">
+                                    {currentList.filter(b => b.status === 'active').length}
+                                    {/* Menu/Deposit 雖然前台只秀一張，但後台可能有排程多張 Active (視當下時間而定)，這裡顯示符合篩選的 Active 總數 */}
+                                </div>
+                            </div>
+                            <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-medium shadow-sm flex items-center gap-2 transition-all active:scale-95">
+                                <Plus size={18} />新增 Banner
+                            </button>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                            <div className="grid grid-cols-12 bg-gray-50/80 p-4 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <div className="col-span-1 text-center">預覽</div><div className="col-span-2">名稱 / 語系</div><div className="col-span-2 text-center">平台</div><div className="col-span-3">排程時間</div><div className="col-span-1.5">受眾</div><div className="col-span-1">點擊數</div><div className="col-span-1 text-center">狀態</div><div className="col-span-0.5 text-center"></div>
+                            </div>
+                            {currentList.length === 0 && <div className="p-12 text-center text-gray-400"><ImageIcon className="mx-auto mb-3 opacity-20" size={48} /><p>目前尚無資料，請點擊右上方新增</p></div>}
+                            <div className="divide-y divide-gray-100">
+                                {currentList.map((banner) => (
+                                    <div key={banner.id} className={`grid grid-cols-12 p-4 items-center hover:bg-gray-50/50 transition-colors group ${banner.status === 'expired' ? 'opacity-60 grayscale' : ''}`}>
+                                        <div className="col-span-1 flex justify-center"><button onClick={() => handlePreviewClick(banner)} className={`w-12 h-8 rounded bg-gradient-to-br flex items-center justify-center text-white text-xs shadow-sm relative overflow-hidden transition-transform hover:scale-105 hover:shadow-md cursor-pointer ${activePage === 'menu' ? 'from-purple-400 to-indigo-500 w-8 h-12' : 'from-blue-400 to-cyan-500'}`} title="點擊放大預覽"><span className="group-hover:opacity-0 transition-opacity">Img</span><div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"><Maximize2 size={14} className="text-white drop-shadow"/></div></button></div>
+                                        <div className="col-span-2 pr-2">
+                                            <div 
+                                                className="font-medium text-gray-900 truncate cursor-pointer hover:text-indigo-600 transition-colors" 
+                                                title="點擊編輯" 
+                                                onClick={() => setIsModalOpen(true)}
+                                            >
+                                                {banner.name}
+                                            </div>
+                                            <div className="flex gap-1 mt-1">{banner.images['en-US'] && <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded border border-gray-200">EN</span>}{banner.images['ph-PH'] && <span className="text-[10px] px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded border border-orange-200">PH</span>}</div></div>
+                                        <div className="col-span-2 text-center">{renderPlatforms(banner.platforms)}</div>
+                                        <div className="col-span-3 text-sm text-gray-600"><div className="flex items-center gap-1"><Calendar size={12} className="text-gray-400"/> {banner.startTime}</div><div className="flex items-center gap-1 mt-0.5 text-gray-400"><span className="w-3 text-center">~</span> {banner.endTime}</div></div>
+                                        <div className="col-span-1.5">{banner.audience === 'all' ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium"><Globe size={12} /> 全體玩家</span> : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-medium"><Users size={12} /> VIP 專屬</span>}</div>
+                                        <div className="col-span-1"><div className="flex items-center gap-1 text-sm font-medium text-gray-600"><MousePointerClick size={14} className="text-gray-400" />{formatNumber(banner.clicks)}</div></div>
+                                        <div className="col-span-1 flex justify-center">{renderStatus(banner.status)}</div>
+                                        <div className="col-span-0.5 flex justify-center gap-1"><button className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md text-gray-400 transition-colors" title="刪除" onClick={() => handleDeleteBanner(banner.id)}><Trash2 size={16} /></button></div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </main>
+                    <BannerModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} activePage={activePage} existingBanners={currentList} onSave={handleSaveBanner} />
+                    <ImagePreviewModal isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} banner={selectedBannerPreview} activePage={activePage} />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<BackendSimulator />);
+    </script>
+</body>
+</html>
